@@ -1,23 +1,10 @@
 import sys
 import datetime
-from PyQt5.QtCore import pyqtSignal, QObject
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGridLayout, QWidget, QPushButton, QLabel, QSizePolicy
 from matplotlib.widgets import Cursor
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGridLayout, QWidget, QPushButton, QLabel, QSizePolicy
 from pyspedas import mms
 import pytplot as pt
-
-
-"""
-======================================================================
-======================================================================
-Currently Testing 2 GUIs where driver GUI calls main GUI
-
-======================================================================
-======================================================================
-"""
-class Communicate(QObject):
-    close_app = pyqtSignal()
 
 class MyWindow(QMainWindow):
     start_time = None
@@ -26,22 +13,14 @@ class MyWindow(QMainWindow):
 
     zooms = []
 
-    def __init__(self, probe, start_date, end_date):
+    def __init__(self, data):
         super().__init__()
-
-        trange    = [start_date, end_date]
-        data_rate = 'srvy'
-        sc        = 'mms'+probe
-        tvmag     = sc+'_fgm_b_gsm_'+data_rate+'_l2'
-        tvion = sc+'_dis_energyspectr_omni_fast'
-        mms.fgm(trange=trange, probe=probe, time_clip=True, varnames=tvmag)
-        mms.fpi(trange=trange, probe=probe, time_clip=True, datatype=['dis-moms'], center_measurement=True, varnames=tvion)
 
         centralWidget = QWidget()
         self.setCentralWidget(centralWidget)
         layout = QGridLayout(centralWidget)
 
-        self.figure, self.axes = pt.tplot([tvmag+'_bvec', tvion], return_plot_objects=True)
+        self.figure, self.axes = pt.tplot(data, return_plot_objects=True)
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas, 1, 0, 1, 9)  # Add the canvas to the second row
 
@@ -190,22 +169,11 @@ class MyWindow(QMainWindow):
     def change_view(self, left, right):
         self.axes[1].set_xlim((left, right))
         self.canvas.draw()
-    
-    def closeEvent(self, event):
-        self.c.close_app.emit()
 
-def main_function(probe='3', start_date='2020-07-11', end_date='2020-07-12'):
+def main_function(data):
+    app = QApplication(sys.argv)
+    window = MyWindow(data)
+    sys.exit(app.exec_())
 
-    app = QApplication.instance()
-    if not app:
-        app = QApplication(sys.argv)
-    window = MyWindow(probe, start_date, end_date)
-    comm = Communicate()
-    comm.close_app.connect(app.quit)
-    if app:
-        sys.exit(app.exec_())
-    else:
-        return app
-    
 if __name__ == "__main__":
     main_function()
